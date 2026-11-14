@@ -1,0 +1,185 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidAdminId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_.@\\-]+$');
+    }
+
+    // Owner & Admin Authorization
+    function isHardcodedOwner() {
+      return isSignedIn() && (
+        request.auth.token.email == 'markazalfurqan19@gmail.com' ||
+        request.auth.token.email == 'iibrahimabdela@gmail.com' ||
+        request.auth.token.email == 'shaxaa72@gmail.com'
+      );
+    }
+
+    function isOwner() {
+      return isHardcodedOwner() || (
+        isSignedIn() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.token.email)) &&
+        get(/databases/$(database)/documents/admins/$(request.auth.token.email)).data.role == 'owner'
+      );
+    }
+
+    function isAdmin() {
+      return isHardcodedOwner() || (
+        isSignedIn() && (
+          exists(/databases/$(database)/documents/admins/$(request.auth.token.email)) ||
+          exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        )
+      );
+    }
+
+    // Connection test document
+    match /test/{docId} {
+      allow read: if isValidId(docId);
+    }
+
+    // Admin & Owner role mapping collection
+    function isValidAdminRole(data) {
+      return data.keys().hasAll(['email', 'role', 'grantedBy', 'grantedAt']) &&
+             data.keys().hasOnly(['email', 'role', 'grantedBy', 'grantedAt']) &&
+             data.email is string && data.email.size() > 0 && data.email.size() <= 120 &&
+             data.role in ['owner', 'admin'] &&
+             data.grantedBy is string && data.grantedBy.size() > 0 && data.grantedBy.size() <= 120 &&
+             data.grantedAt is string && data.grantedAt.size() > 0 && data.grantedAt.size() <= 64;
+    }
+
+    match /admins/{adminId} {
+      allow get: if isHardcodedOwner() || (isSignedIn() && (adminId == request.auth.token.email || adminId == request.auth.uid)) || isOwner();
+      allow list: if isHardcodedOwner() || (isSignedIn() && resource.data.email == request.auth.token.email) || isOwner();
+      allow create, update: if isOwner() && isValidAdminId(adminId) && isValidAdminRole(incoming());
+      allow delete: if isOwner() && isValidAdminId(adminId);
+    }
+
+    // Members Collection (RBAC: Admins see all, Non-Admins see only members they created)
+    function isValidMember(data) {
+      return data.keys().hasAll(['fullName', 'phoneNumber', 'memberId', 'monthlyPledgeETB', 'status', 'createdBy']) &&
+             data.keys().hasOnly([
+               'fullName', 'phoneNumber', 'email', 'halqa', 'memberId',
+               'monthlyPledgeETB', 'status', 'city', 'createdBy', 'createdByEmail',
+               'createdAt', 'updatedAt'
+             ]) &&
+             data.fullName is string && data.fullName.size() > 0 && data.fullName.size() <= 120 &&
+             data.phoneNumber is string && data.phoneNumber.size() > 0 && data.phoneNumber.size() <= 30 &&
+             data.memberId is string && data.memberId.size() > 0 && data.memberId.size() <= 30 &&
+             data.monthlyPledgeETB is number && data.monthlyPledgeETB >= 0 &&
+             data.status in ['active', 'inactive', 'suspended'] &&
+             data.createdBy is string && data.createdBy.size() > 0 && data.createdBy.size() <= 128 &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 100)) &&
+             (!('halqa' in data) || (data.halqa is string && data.halqa.size() <= 60)) &&
+             (!('city' in data) || (data.city is string && data.city.size() <= 80)) &&
+             (!('createdByEmail' in data) || (data.createdByEmail is string && data.createdByEmail.size() <= 120)) &&
+             (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 64)) &&
+             (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64));
+    }
+
+    match /members/{memberId} {
+      allow list: if isAdmin() || (isSignedIn() && resource.data.createdBy == request.auth.uid);
+      allow get: if isAdmin() || (isSignedIn() && resource.data.createdBy == request.auth.uid);
+      allow create: if isSignedIn() && isValidId(memberId) && isValidMember(incoming()) && incoming().createdBy == request.auth.uid;
+      allow update: if isSignedIn() && isValidId(memberId) && isValidMember(incoming()) &&
+                       incoming().createdBy == existing().createdBy &&
+                       (isAdmin() || (existing().createdBy == request.auth.uid &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'fullName', 'phoneNumber', 'email', 'halqa',
+                           'monthlyPledgeETB', 'status', 'city', 'updatedAt'
+                         ])));
+      allow delete: if isAdmin() && isValidId(memberId);
+    }
+
+    // Contributions Collection (Supports recording & updating previously recorded payments)
+    function isValidContribution(data) {
+      return data.keys().hasAll([
+               'memberId', 'memberName', 'receiptNumber', 'amountETB',
+               'ethiopianMonth', 'ethiopianYear', 'paymentMethod', 'recordedBy', 'status'
+             ]) &&
+             data.keys().hasOnly([
+               'memberId', 'memberName', 'receiptNumber', 'amountETB',
+               'ethiopianMonth', 'ethiopianYear', 'paymentMethod',
+               'transactionReference', 'notes', 'recordedBy', 'status',
+               'createdAt', 'updatedAt'
+             ]) &&
+             data.memberId is string && data.memberId.size() > 0 && data.memberId.size() <= 64 &&
+             data.memberName is string && data.memberName.size() > 0 && data.memberName.size() <= 120 &&
+             data.receiptNumber is string && data.receiptNumber.size() > 0 && data.receiptNumber.size() <= 40 &&
+             data.amountETB is number && data.amountETB > 0 &&
+             data.ethiopianMonth is string && data.ethiopianMonth.size() > 0 && data.ethiopianMonth.size() <= 30 &&
+             data.ethiopianYear is number &&
+             data.paymentMethod in ['cbe', 'telebirr', 'awash', 'cbe_birr', 'cash', 'bank_transfer', 'other'] &&
+             data.recordedBy is string && data.recordedBy.size() > 0 && data.recordedBy.size() <= 128 &&
+             data.status in ['completed', 'verified', 'pending', 'voided'] &&
+             (!('transactionReference' in data) || (data.transactionReference is string && data.transactionReference.size() <= 100)) &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() <= 300)) &&
+             (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 64)) &&
+             (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64));
+    }
+
+    match /contributions/{contributionId} {
+      allow list: if isAdmin() || (isSignedIn() && resource.data.recordedBy == request.auth.uid);
+      allow get: if isAdmin() || (isSignedIn() && resource.data.recordedBy == request.auth.uid);
+      allow create: if isSignedIn() && isValidId(contributionId) && isValidContribution(incoming()) && incoming().recordedBy == request.auth.uid;
+      allow update: if isSignedIn() && isValidId(contributionId) && isValidContribution(incoming()) &&
+                       incoming().recordedBy == existing().recordedBy &&
+                       (isAdmin() || (existing().recordedBy == request.auth.uid &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'amountETB', 'ethiopianMonth', 'ethiopianYear',
+                           'paymentMethod', 'transactionReference', 'notes',
+                           'status', 'updatedAt'
+                         ])));
+      allow delete: if isAdmin() && isValidId(contributionId);
+    }
+
+    // Center Settings Collection
+    function isValidSetting(data) {
+      return data.keys().hasAll(['centerName']) &&
+             data.keys().hasOnly([
+               'centerName', 'phone', 'email', 'bankAccountDetails',
+               'monthlyTargetETB', 'googleSpreadsheetId', 'googleSpreadsheetTitle',
+               'googleSpreadsheetUrl', 'googleLastSyncAt', 'updatedBy', 'updatedAt'
+             ]) &&
+             data.centerName is string && data.centerName.size() > 0 && data.centerName.size() <= 150 &&
+             (!('phone' in data) || (data.phone is string && data.phone.size() <= 40)) &&
+             (!('email' in data) || (data.email is string && data.email.size() <= 100)) &&
+             (!('bankAccountDetails' in data) || (data.bankAccountDetails is string && data.bankAccountDetails.size() <= 500)) &&
+             (!('monthlyTargetETB' in data) || (data.monthlyTargetETB is number && data.monthlyTargetETB >= 0 && data.monthlyTargetETB <= 1000000000)) &&
+             (!('googleSpreadsheetId' in data) || (data.googleSpreadsheetId is string && data.googleSpreadsheetId.size() <= 120)) &&
+             (!('googleSpreadsheetTitle' in data) || (data.googleSpreadsheetTitle is string && data.googleSpreadsheetTitle.size() <= 160)) &&
+             (!('googleSpreadsheetUrl' in data) || (data.googleSpreadsheetUrl is string && data.googleSpreadsheetUrl.size() <= 300)) &&
+             (!('googleLastSyncAt' in data) || (data.googleLastSyncAt is string && data.googleLastSyncAt.size() <= 64)) &&
+             (!('updatedBy' in data) || (data.updatedBy is string && data.updatedBy.size() <= 128)) &&
+             (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64));
+    }
+
+    match /settings/{settingId} {
+      allow get: if isSignedIn();
+      allow list: if isAdmin();
+      allow create, update: if isAdmin() && isValidId(settingId) && isValidSetting(incoming());
+      allow delete: if isAdmin() && isValidId(settingId);
+    }
+  }
+}

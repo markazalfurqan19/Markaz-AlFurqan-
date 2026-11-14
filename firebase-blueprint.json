@@ -1,0 +1,250 @@
+{
+  "entities": {
+    "Member": {
+      "title": "Member",
+      "description": "Registered member/donor of Al-Furqaan Quran Memorization Center",
+      "type": "object",
+      "properties": {
+        "fullName": {
+          "type": "string",
+          "description": "Full name of the member",
+          "maxLength": 120
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "Ethiopian or international phone number",
+          "maxLength": 30
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the member",
+          "maxLength": 100
+        },
+        "halqa": {
+          "type": "string",
+          "description": "Quran study group or halqa name",
+          "maxLength": 60
+        },
+        "memberId": {
+          "type": "string",
+          "description": "Assigned unique member code, e.g. ALF-M-001",
+          "maxLength": 30
+        },
+        "monthlyPledgeETB": {
+          "type": "number",
+          "description": "Pledged monthly contribution in Ethiopian Birr"
+        },
+        "status": {
+          "type": "string",
+          "description": "Membership status",
+          "enum": ["active", "inactive", "suspended"]
+        },
+        "city": {
+          "type": "string",
+          "description": "City or residential location",
+          "maxLength": 80
+        },
+        "createdBy": {
+          "type": "string",
+          "description": "UID of user who registered the member",
+          "maxLength": 128
+        },
+        "createdByEmail": {
+          "type": "string",
+          "description": "Email of user who registered the member",
+          "maxLength": 120
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp of creation",
+          "maxLength": 64
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp of last update",
+          "maxLength": 64
+        }
+      },
+      "required": ["fullName", "phoneNumber", "memberId", "monthlyPledgeETB", "status", "createdBy"]
+    },
+    "Contribution": {
+      "title": "Contribution",
+      "description": "Monthly contribution / donation payment record",
+      "type": "object",
+      "properties": {
+        "memberId": {
+          "type": "string",
+          "description": "Member code or ID of the contributor",
+          "maxLength": 64
+        },
+        "memberName": {
+          "type": "string",
+          "description": "Full name of member at time of contribution",
+          "maxLength": 120
+        },
+        "receiptNumber": {
+          "type": "string",
+          "description": "Unique digital receipt serial number e.g. ALF-REC-2019-0001",
+          "maxLength": 40
+        },
+        "amountETB": {
+          "type": "number",
+          "description": "Amount paid in Ethiopian Birr"
+        },
+        "ethiopianMonth": {
+          "type": "string",
+          "description": "Ethiopian calendar month for which contribution is paid",
+          "maxLength": 30
+        },
+        "ethiopianYear": {
+          "type": "number",
+          "description": "Ethiopian calendar year"
+        },
+        "paymentMethod": {
+          "type": "string",
+          "description": "Payment channel used",
+          "enum": ["cbe", "telebirr", "awash", "cbe_birr", "cash", "bank_transfer", "other"]
+        },
+        "transactionReference": {
+          "type": "string",
+          "description": "Bank/Telebirr transaction slip or reference code",
+          "maxLength": 100
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional notes or dua prayer intention",
+          "maxLength": 300
+        },
+        "recordedBy": {
+          "type": "string",
+          "description": "UID of user who recorded contribution",
+          "maxLength": 128
+        },
+        "status": {
+          "type": "string",
+          "description": "Verification status of contribution",
+          "enum": ["completed", "verified", "pending", "voided"]
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp of record",
+          "maxLength": 64
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp of last update",
+          "maxLength": 64
+        }
+      },
+      "required": ["memberId", "memberName", "receiptNumber", "amountETB", "ethiopianMonth", "ethiopianYear", "paymentMethod", "recordedBy", "status"]
+    },
+    "AdminRole": {
+      "title": "AdminRole",
+      "description": "Assigned owner or admin role for RBAC access control",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "Google account email assigned a role",
+          "maxLength": 120
+        },
+        "role": {
+          "type": "string",
+          "description": "Role level granted",
+          "enum": ["owner", "admin"]
+        },
+        "grantedBy": {
+          "type": "string",
+          "description": "Email of the owner who granted the role",
+          "maxLength": 120
+        },
+        "grantedAt": {
+          "type": "string",
+          "description": "ISO timestamp when role was granted",
+          "maxLength": 64
+        }
+      },
+      "required": ["email", "role", "grantedBy", "grantedAt"]
+    },
+    "CenterSetting": {
+      "title": "CenterSetting",
+      "description": "Configuration and contact info for Al-Furqaan Quran Center",
+      "type": "object",
+      "properties": {
+        "centerName": {
+          "type": "string",
+          "description": "Official name of the Quran Hifz center",
+          "maxLength": 150
+        },
+        "phone": {
+          "type": "string",
+          "description": "Official contact phone number",
+          "maxLength": 40
+        },
+        "email": {
+          "type": "string",
+          "description": "Official contact email",
+          "maxLength": 100
+        },
+        "bankAccountDetails": {
+          "type": "string",
+          "description": "Official bank account and Telebirr merchant details",
+          "maxLength": 500
+        },
+        "monthlyTargetETB": {
+          "type": "number",
+          "description": "Monthly financial contribution target in Ethiopian Birr"
+        },
+        "googleSpreadsheetId": {
+          "type": "string",
+          "description": "Linked Google Spreadsheet ID for syncing center records",
+          "maxLength": 120
+        },
+        "googleSpreadsheetTitle": {
+          "type": "string",
+          "description": "Title of the linked Google Spreadsheet",
+          "maxLength": 160
+        },
+        "googleSpreadsheetUrl": {
+          "type": "string",
+          "description": "URL of the linked Google Spreadsheet",
+          "maxLength": 300
+        },
+        "googleLastSyncAt": {
+          "type": "string",
+          "description": "ISO timestamp of the last Google Sheets sync",
+          "maxLength": 64
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "UID of admin who last updated settings",
+          "maxLength": 128
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp of last settings update",
+          "maxLength": 64
+        }
+      },
+      "required": ["centerName"]
+    }
+  },
+  "firestore": {
+    "/members/{memberId}": {
+      "schema": "Member",
+      "description": "Collection of registered Al-Furqaan members and donors"
+    },
+    "/contributions/{contributionId}": {
+      "schema": "Contribution",
+      "description": "Collection of contribution and payment transactions"
+    },
+    "/admins/{adminId}": {
+      "schema": "AdminRole",
+      "description": "Owner and Admin role assignments"
+    },
+    "/settings/{settingId}": {
+      "schema": "CenterSetting",
+      "description": "Al-Furqaan center global settings and bank details"
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "Sirna Buusii Miseensaa Al-Furqaan",
+  "description": "Giddu-gala Hifzii Qur’aanaa Al-Furqaan: Sirna to'annoo miseensotaa, buusii ji'aa, kaffaltii, nagahee fi gabaasa faayinaansii.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
