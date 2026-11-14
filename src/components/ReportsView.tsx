@@ -21,7 +21,6 @@ interface ReportsViewProps {
   contributions: Contribution[];
   centerSettings: CenterSetting;
   lang: Language;
-  onOpenSheetsSync: () => void;
 }
 
 export const ReportsView: React.FC<ReportsViewProps> = ({
@@ -29,7 +28,6 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   contributions,
   centerSettings,
   lang,
-  onOpenSheetsSync,
 }) => {
   const t = TRANSLATIONS[lang];
   const currentEth = getCurrentEthiopianDate();
@@ -142,14 +140,6 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           </button>
           <button
             type="button"
-            onClick={onOpenSheetsSync}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[#1E3A8A]/30 bg-blue-50 dark:bg-blue-950/40 px-3.5 py-2 text-xs font-semibold text-[#0B1F3A] dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 whitespace-nowrap shrink-0"
-          >
-            <FileSpreadsheet className="w-3.5 h-3.5" />
-            <span>{t.actions.syncGoogleSheets}</span>
-          </button>
-          <button
-            type="button"
             onClick={() => downloadContributionsCSV(yearContributions)}
             className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-[#1B3158] px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-[#13294E] whitespace-nowrap shrink-0"
           >
@@ -181,7 +171,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
             {t.labels.monthlyMatrix} · {selectedYear} E.C.
           </h3>
           <div className="text-xs text-slate-500 dark:text-slate-400">
-            <span className="text-emerald-700 dark:text-emerald-400 font-semibold">✓ {t.labels.paid}</span>
+            <span className="text-[#1E3A8A] dark:text-blue-400 font-semibold">✓ {t.labels.paid}</span>
             <span className="mx-2" aria-hidden="true">·</span>
             <span>— {t.labels.unpaid}</span>
           </div>
@@ -230,7 +220,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                             title={paidAmount > 0 ? formatETB(paidAmount) : t.labels.unpaid}
                           >
                             {paidAmount > 0 ? (
-                              <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+                              <span className="font-semibold text-[#1E3A8A] dark:text-blue-400">
                                 {paidAmount >= 1000
                                   ? `${(paidAmount / 1000).toFixed(1)}k`
                                   : paidAmount}

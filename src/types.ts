@@ -60,10 +60,6 @@ export interface CenterSetting {
   email?: string;
   bankAccountDetails?: string;
   monthlyTargetETB?: number;
-  googleSpreadsheetId?: string;
-  googleSpreadsheetTitle?: string;
-  googleSpreadsheetUrl?: string;
-  googleLastSyncAt?: string;
   updatedBy?: string;
   updatedAt?: string;
 }
@@ -86,9 +82,6 @@ export const SCHEMA_LIMITS = {
   SETTING_PHONE: 40,
   SETTING_EMAIL: 100,
   SETTING_BANK_DETAILS: 500,
-  SETTING_SHEET_ID: 120,
-  SETTING_SHEET_TITLE: 160,
-  SETTING_SHEET_URL: 300,
   MAX_TARGET_ETB: 1000000000,
   DOC_ID: 128,
 } as const;

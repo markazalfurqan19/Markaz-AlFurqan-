@@ -1,76 +1,16 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { doc, getDocFromServer, getFirestore } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 
-export const GOOGLE_SHEETS_SCOPES = [
-  'https://www.googleapis.com/auth/spreadsheets',
-] as const;
-
 const app = initializeApp(firebaseConfig);
-const firestoreDatabaseId = (firebaseConfig as { firestoreDatabaseId?: string }).firestoreDatabaseId;
-export const db = firestoreDatabaseId ? getFirestore(app, firestoreDatabaseId) : getFirestore(app);
+export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
-
-GOOGLE_SHEETS_SCOPES.forEach((scope) => {
-  googleProvider.addScope(scope);
-});
 
 googleProvider.setCustomParameters({
   prompt: 'select_account',
 });
-
-// Strict in-memory Google OAuth access token cache (never stored in localStorage/sessionStorage)
-let cachedGoogleAccessToken: string | null = null;
-const tokenListeners = new Set<(hasToken: boolean) => void>();
-
-function notifyTokenListeners() {
-  const hasToken = Boolean(cachedGoogleAccessToken);
-  tokenListeners.forEach((listener) => listener(hasToken));
-}
-
-export function setCachedGoogleAccessToken(token: string | null) {
-  cachedGoogleAccessToken = token || null;
-  notifyTokenListeners();
-}
-
-export function getCachedGoogleAccessToken(): string | null {
-  return cachedGoogleAccessToken;
-}
-
-export function clearCachedGoogleAccessToken() {
-  cachedGoogleAccessToken = null;
-  notifyTokenListeners();
-}
-
-export function subscribeGoogleAccessToken(listener: (hasToken: boolean) => void): () => void {
-  tokenListeners.add(listener);
-  listener(Boolean(cachedGoogleAccessToken));
-  return () => {
-    tokenListeners.delete(listener);
-  };
-}
-
-// Clear in-memory token whenever user signs out
-onAuthStateChanged(auth, (firebaseUser) => {
-  if (!firebaseUser) {
-    clearCachedGoogleAccessToken();
-  }
-});
-
-/**
- * Must be invoked directly from a user button click to acquire/refresh the Google Sheets token.
- */
-export async function connectGoogleSheets(): Promise<string> {
-  const result = await signInWithPopup(auth, googleProvider);
-  const credential = GoogleAuthProvider.credentialFromResult(result);
-  if (!credential?.accessToken) {
-    throw new Error('Failed to obtain Google Sheets access token.');
-  }
-  setCachedGoogleAccessToken(credential.accessToken);
-  return credential.accessToken;
-}
 
 export enum OperationType {
   CREATE = 'create',

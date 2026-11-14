@@ -195,26 +195,6 @@
           "type": "number",
           "description": "Monthly financial contribution target in Ethiopian Birr"
         },
-        "googleSpreadsheetId": {
-          "type": "string",
-          "description": "Linked Google Spreadsheet ID for syncing center records",
-          "maxLength": 120
-        },
-        "googleSpreadsheetTitle": {
-          "type": "string",
-          "description": "Title of the linked Google Spreadsheet",
-          "maxLength": 160
-        },
-        "googleSpreadsheetUrl": {
-          "type": "string",
-          "description": "URL of the linked Google Spreadsheet",
-          "maxLength": 300
-        },
-        "googleLastSyncAt": {
-          "type": "string",
-          "description": "ISO timestamp of the last Google Sheets sync",
-          "maxLength": 64
-        },
         "updatedBy": {
           "type": "string",
           "description": "UID of admin who last updated settings",

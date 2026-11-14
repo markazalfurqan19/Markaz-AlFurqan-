@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Check, FileSpreadsheet, Shield, Trash2, UserPlus } from 'lucide-react';
+import { Check, Shield, Trash2, UserPlus } from 'lucide-react';
 import { AdminRole, AdminRoleType, CenterSetting, SCHEMA_LIMITS } from '../types';
 import { Language, TRANSLATIONS } from '../i18n';
 import { PWAInstallButton } from './PWAInstallButton';
@@ -14,7 +14,6 @@ interface SettingsViewProps {
   onSaveSettings: (data: CenterSetting) => Promise<void>;
   onGrantAdmin: (email: string, role: AdminRoleType) => Promise<void>;
   onRevokeAdmin: (adminId: string) => Promise<void>;
-  onOpenSheetsSync: () => void;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -27,7 +26,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onSaveSettings,
   onGrantAdmin,
   onRevokeAdmin,
-  onOpenSheetsSync,
 }) => {
   const t = TRANSLATIONS[lang];
 
@@ -125,7 +123,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </h3>
           </div>
           {savedNotice && (
-            <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400 shrink-0">
+            <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#1E3A8A] dark:text-blue-400 shrink-0">
               <Check className="w-3.5 h-3.5" />
               <span>{t.labels.savedSuccess}</span>
             </span>
@@ -230,35 +228,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </form>
       </div>
 
-      {/* RBAC + Google Sheets + App Install */}
+      {/* RBAC + App Install */}
       <div className="lg:col-span-5 space-y-6">
-        <div className="rounded-xl border border-slate-200 dark:border-[#1B3158] bg-white dark:bg-[#0B1933] p-6 space-y-3">
-          <div className="flex items-start gap-3">
-            <FileSpreadsheet className="w-5 h-5 text-[#1D4ED8] dark:text-blue-400 shrink-0 mt-0.5" />
-            <div className="min-w-0">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                {t.labels.sheetsTitle}
-              </h3>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                {centerSettings.googleSpreadsheetTitle
-                  ? `${centerSettings.googleSpreadsheetTitle}`
-                  : t.labels.sheetsDesc}
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onOpenSheetsSync}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-[#0B1F3A] hover:bg-[#132f57] dark:bg-blue-700 dark:hover:bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white whitespace-nowrap"
-          >
-            <FileSpreadsheet className="w-3.5 h-3.5" />
-            <span>{t.actions.syncGoogleSheets}</span>
-          </button>
-        </div>
-
         <div className="rounded-xl border border-slate-200 dark:border-[#1B3158] bg-white dark:bg-[#0B1933] p-6 space-y-4">
           <div className="flex items-start gap-3">
-            <Shield className="w-5 h-5 text-[#1D4ED8] dark:text-blue-400 shrink-0 mt-0.5" />
+            <Shield className="w-5 h-5 text-[#1E3A8A] dark:text-blue-400 shrink-0 mt-0.5" />
             <div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white">
                 {t.labels.rbacTitle}

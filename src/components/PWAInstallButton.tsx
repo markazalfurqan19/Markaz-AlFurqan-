@@ -40,7 +40,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ label }) => 
         </button>
 
         {showIOSGuide && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-xs">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#060E1F]/70 p-4 backdrop-blur-xs">
             <div className="w-full max-w-sm rounded-xl border border-slate-200 dark:border-[#1B3158] bg-white dark:bg-[#0B1933] p-6 shadow-xl">
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-bold text-slate-900 dark:text-white">
@@ -49,7 +49,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ label }) => 
                 <button
                   type="button"
                   onClick={() => setShowIOSGuide(false)}
-                  className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-[#13294E]"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -65,7 +65,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ label }) => 
               <button
                 type="button"
                 onClick={() => setShowIOSGuide(false)}
-                className="mt-5 w-full rounded-lg bg-slate-900 dark:bg-slate-100 py-2 text-sm font-semibold text-white dark:text-slate-900 hover:opacity-90 transition-opacity"
+                className="mt-5 w-full rounded-lg bg-[#0B1F3A] dark:bg-blue-700 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
               >
                 Cufi
               </button>

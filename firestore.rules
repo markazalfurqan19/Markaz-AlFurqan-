@@ -159,18 +159,13 @@ service cloud.firestore {
       return data.keys().hasAll(['centerName']) &&
              data.keys().hasOnly([
                'centerName', 'phone', 'email', 'bankAccountDetails',
-               'monthlyTargetETB', 'googleSpreadsheetId', 'googleSpreadsheetTitle',
-               'googleSpreadsheetUrl', 'googleLastSyncAt', 'updatedBy', 'updatedAt'
+               'monthlyTargetETB', 'updatedBy', 'updatedAt'
              ]) &&
              data.centerName is string && data.centerName.size() > 0 && data.centerName.size() <= 150 &&
              (!('phone' in data) || (data.phone is string && data.phone.size() <= 40)) &&
              (!('email' in data) || (data.email is string && data.email.size() <= 100)) &&
              (!('bankAccountDetails' in data) || (data.bankAccountDetails is string && data.bankAccountDetails.size() <= 500)) &&
              (!('monthlyTargetETB' in data) || (data.monthlyTargetETB is number && data.monthlyTargetETB >= 0 && data.monthlyTargetETB <= 1000000000)) &&
-             (!('googleSpreadsheetId' in data) || (data.googleSpreadsheetId is string && data.googleSpreadsheetId.size() <= 120)) &&
-             (!('googleSpreadsheetTitle' in data) || (data.googleSpreadsheetTitle is string && data.googleSpreadsheetTitle.size() <= 160)) &&
-             (!('googleSpreadsheetUrl' in data) || (data.googleSpreadsheetUrl is string && data.googleSpreadsheetUrl.size() <= 300)) &&
-             (!('googleLastSyncAt' in data) || (data.googleLastSyncAt is string && data.googleLastSyncAt.size() <= 64)) &&
              (!('updatedBy' in data) || (data.updatedBy is string && data.updatedBy.size() <= 128)) &&
              (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64));
     }

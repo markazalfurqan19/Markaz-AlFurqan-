@@ -210,7 +210,7 @@ export const ContributionModal: React.FC<ContributionModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-xs">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#060E1F]/70 p-4 backdrop-blur-xs">
       <div className="w-full max-w-lg rounded-2xl border border-slate-200 dark:border-[#1B3158] bg-white dark:bg-[#0B1933] shadow-2xl overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 dark:border-[#1B3158] flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
@@ -239,7 +239,7 @@ export const ContributionModal: React.FC<ContributionModalProps> = ({
 
         {printableReceipt && receiptSnapshot ? (
           <div className="p-6 space-y-4 max-h-[82vh] overflow-y-auto">
-            <div className="no-print rounded-lg border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/40 px-3.5 py-2.5 text-xs text-[#0B1F3A] dark:text-blue-200 flex flex-wrap items-center justify-between gap-2">
+            <div className="no-print rounded-lg border border-[#1E3A8A]/30 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/40 px-3.5 py-2.5 text-xs text-[#0B1F3A] dark:text-blue-200 flex flex-wrap items-center justify-between gap-2">
               <span>
                 {t.labels.receiptPreparedFor}{' '}
                 <strong className="font-semibold">{printableReceipt.recipientEmail}</strong>
@@ -565,7 +565,7 @@ export const ContributionModal: React.FC<ContributionModalProps> = ({
               type="button"
               onClick={handleSendReceipt}
               disabled={!selectedMemberId}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-[#1E3A8A]/30 bg-blue-50 dark:bg-blue-950/40 text-xs font-semibold text-[#0B1F3A] dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 disabled:opacity-50 whitespace-nowrap shrink-0"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-[#1E3A8A]/30 bg-blue-50/70 dark:bg-blue-950/40 text-xs font-semibold text-[#0B1F3A] dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 disabled:opacity-50 whitespace-nowrap shrink-0"
             >
               <Send className="w-3.5 h-3.5" />
               <span>{t.actions.sendReceipt}</span>

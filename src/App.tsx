@@ -14,7 +14,6 @@ import {
 import {
   BarChart3,
   CreditCard,
-  FileSpreadsheet,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -50,8 +49,6 @@ import { ReportsView } from './components/ReportsView';
 import { SettingsView } from './components/SettingsView';
 import { MemberModal } from './components/MemberModal';
 import { ContributionModal } from './components/ContributionModal';
-import { GoogleSheetsSyncModal } from './components/GoogleSheetsSyncModal';
-import { PullSyncPreview } from './utils/googleSheetsSync';
 
 type ActiveTab = 'dashboard' | 'members' | 'contributions' | 'reports' | 'settings';
 
@@ -94,7 +91,6 @@ function AppContent() {
   const [contributionModalOpen, setContributionModalOpen] = useState(false);
   const [editingContribution, setEditingContribution] = useState<Contribution | null>(null);
   const [preselectedMember, setPreselectedMember] = useState<Member | null>(null);
-  const [sheetsModalOpen, setSheetsModalOpen] = useState(false);
 
   const isOnline = useOnlineStatus();
   const t = TRANSLATIONS[lang];
@@ -237,10 +233,6 @@ function AppContent() {
             email: data.email || '',
             bankAccountDetails: data.bankAccountDetails || '',
             monthlyTargetETB: data.monthlyTargetETB ?? 50000,
-            googleSpreadsheetId: data.googleSpreadsheetId || '',
-            googleSpreadsheetTitle: data.googleSpreadsheetTitle || '',
-            googleSpreadsheetUrl: data.googleSpreadsheetUrl || '',
-            googleLastSyncAt: data.googleLastSyncAt || '',
           });
         }
       },
@@ -413,112 +405,12 @@ function AppContent() {
         email: data.email || '',
         bankAccountDetails: data.bankAccountDetails || '',
         monthlyTargetETB: data.monthlyTargetETB ?? 0,
-        googleSpreadsheetId: (
-          data.googleSpreadsheetId ?? centerSettings.googleSpreadsheetId ?? ''
-        ).slice(0, SCHEMA_LIMITS.SETTING_SHEET_ID),
-        googleSpreadsheetTitle: (
-          data.googleSpreadsheetTitle ?? centerSettings.googleSpreadsheetTitle ?? ''
-        ).slice(0, SCHEMA_LIMITS.SETTING_SHEET_TITLE),
-        googleSpreadsheetUrl: (
-          data.googleSpreadsheetUrl ?? centerSettings.googleSpreadsheetUrl ?? ''
-        ).slice(0, SCHEMA_LIMITS.SETTING_SHEET_URL),
-        googleLastSyncAt: (
-          data.googleLastSyncAt ?? centerSettings.googleLastSyncAt ?? ''
-        ).slice(0, 64),
         updatedBy: user.uid,
         updatedAt: new Date().toISOString(),
       });
     } catch (err) {
       handleFirestoreError(err, OperationType.WRITE, path);
     }
-  };
-
-  const handleSaveSheetSettings = async (patch: Partial<CenterSetting>) => {
-    await handleSaveSettings({
-      ...centerSettings,
-      ...patch,
-    });
-  };
-
-  const handleImportFromSheet = async (preview: PullSyncPreview) => {
-    if (!user) {
-      return { membersAdded: 0, membersUpdated: 0, contributionsAdded: 0 };
-    }
-    const now = new Date().toISOString();
-    let membersAdded = 0;
-    let membersUpdated = 0;
-    let contributionsAdded = 0;
-
-    for (const draft of preview.newMembers) {
-      const docId = sanitizeDocId(`${draft.memberId}-${Date.now().toString(36)}-${membersAdded}`);
-      const path = `members/${docId}`;
-      try {
-        await setDoc(doc(db, 'members', docId), {
-          fullName: draft.fullName.slice(0, SCHEMA_LIMITS.MEMBER_FULL_NAME),
-          phoneNumber: draft.phoneNumber.slice(0, SCHEMA_LIMITS.MEMBER_PHONE),
-          email: draft.email.slice(0, SCHEMA_LIMITS.MEMBER_EMAIL),
-          memberId: draft.memberId.slice(0, SCHEMA_LIMITS.MEMBER_CODE),
-          monthlyPledgeETB: draft.monthlyPledgeETB,
-          status: draft.status,
-          city: draft.city.slice(0, SCHEMA_LIMITS.MEMBER_CITY),
-          createdBy: user.uid,
-          createdByEmail: (user.email || '').slice(0, SCHEMA_LIMITS.ADMIN_EMAIL),
-          createdAt: now,
-          updatedAt: now,
-        });
-        membersAdded += 1;
-      } catch (err) {
-        handleFirestoreError(err, OperationType.CREATE, path);
-      }
-    }
-
-    for (const draft of preview.updatedMembers) {
-      if (!draft.existingDocId) continue;
-      const path = `members/${draft.existingDocId}`;
-      try {
-        await updateDoc(doc(db, 'members', draft.existingDocId), {
-          fullName: draft.fullName.slice(0, SCHEMA_LIMITS.MEMBER_FULL_NAME),
-          phoneNumber: draft.phoneNumber.slice(0, SCHEMA_LIMITS.MEMBER_PHONE),
-          email: draft.email.slice(0, SCHEMA_LIMITS.MEMBER_EMAIL),
-          monthlyPledgeETB: draft.monthlyPledgeETB,
-          status: draft.status,
-          city: draft.city.slice(0, SCHEMA_LIMITS.MEMBER_CITY),
-          updatedAt: now,
-        });
-        membersUpdated += 1;
-      } catch (err) {
-        handleFirestoreError(err, OperationType.UPDATE, path);
-      }
-    }
-
-    for (const draft of preview.newContributions) {
-      const docId = sanitizeDocId(
-        `${draft.receiptNumber}-${Date.now().toString(36)}-${contributionsAdded}`
-      );
-      const path = `contributions/${docId}`;
-      try {
-        await setDoc(doc(db, 'contributions', docId), {
-          memberId: draft.memberId.slice(0, SCHEMA_LIMITS.CONTRIBUTION_MEMBER_ID),
-          memberName: draft.memberName.slice(0, SCHEMA_LIMITS.CONTRIBUTION_MEMBER_NAME),
-          receiptNumber: draft.receiptNumber.slice(0, SCHEMA_LIMITS.CONTRIBUTION_RECEIPT),
-          amountETB: draft.amountETB,
-          ethiopianMonth: draft.ethiopianMonth.slice(0, SCHEMA_LIMITS.CONTRIBUTION_MONTH),
-          ethiopianYear: draft.ethiopianYear,
-          paymentMethod: draft.paymentMethod,
-          transactionReference: draft.transactionReference.slice(0, SCHEMA_LIMITS.CONTRIBUTION_TX_REF),
-          notes: draft.notes.slice(0, SCHEMA_LIMITS.CONTRIBUTION_NOTES),
-          recordedBy: user.uid,
-          status: draft.status,
-          createdAt: now,
-          updatedAt: now,
-        });
-        contributionsAdded += 1;
-      } catch (err) {
-        handleFirestoreError(err, OperationType.CREATE, path);
-      }
-    }
-
-    return { membersAdded, membersUpdated, contributionsAdded };
   };
 
   const handleGrantAdmin = async (email: string, role: AdminRoleType) => {
@@ -549,7 +441,7 @@ function AppContent() {
   if (!authReady) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F6F8FC] dark:bg-[#060E1F]">
-        <div className="w-8 h-8 rounded-full border-2 border-slate-300 dark:border-[#1B3158] border-t-[#1D4ED8] animate-spin" />
+        <div className="w-8 h-8 rounded-full border-2 border-slate-300 dark:border-[#1B3158] border-t-[#0B1F3A] dark:border-t-blue-500 animate-spin" />
       </div>
     );
   }
@@ -636,7 +528,7 @@ function AppContent() {
           <button
             type="button"
             onClick={() => setDarkMode((prev) => !prev)}
-            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg border border-slate-200 dark:border-[#1B3158] text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#13294E] whitespace-nowrap"
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg border border-slate-200 dark:border-[#1B3158] text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#13294E] whitespace-nowrap"
           >
             {darkMode ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
             <span>{darkMode ? t.theme.deepBlue : t.theme.midnight}</span>
@@ -644,7 +536,7 @@ function AppContent() {
           <button
             type="button"
             onClick={() => setLang((prev) => (prev === 'om' ? 'en' : 'om'))}
-            className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-[#1B3158] text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#13294E]"
+            className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-[#1B3158] text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#13294E] shrink-0"
           >
             {lang === 'om' ? 'EN' : 'OM'}
           </button>
@@ -690,7 +582,7 @@ function AppContent() {
       {mobileNavOpen && (
         <div className="fixed inset-0 z-50 lg:hidden flex">
           <div
-            className="fixed inset-0 bg-slate-950/50"
+            className="fixed inset-0 bg-[#060E1F]/60"
             onClick={() => setMobileNavOpen(false)}
           />
           <div className="relative w-64 max-w-[80vw] h-full z-10">{sidebarContent}</div>
@@ -700,7 +592,7 @@ function AppContent() {
       {/* Main Content */}
       <div className="flex-1 min-w-0 flex flex-col">
         {/* Top Bar Contract */}
-        <header className="sticky top-0 z-30 bg-white/95 dark:bg-[#0B1933]/95 backdrop-blur-xs border-b border-slate-200 dark:border-[#1B3158] px-6 py-3.5 flex items-center justify-between gap-4">
+        <header className="sticky top-0 z-30 bg-white/95 dark:bg-[#0B1933]/95 backdrop-blur-xs border-b border-slate-200 dark:border-[#1B3158] px-6 py-3.5 flex items-center justify-between gap-8">
           <div className="flex items-center gap-3 min-w-0">
             <button
               type="button"
@@ -725,17 +617,7 @@ function AppContent() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 shrink-0">
-            <button
-              type="button"
-              onClick={() => setSheetsModalOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-[#1B3158] bg-white dark:bg-[#060E1F] hover:bg-slate-50 dark:hover:bg-[#13294E] px-3 py-2 text-xs font-semibold text-[#0B1F3A] dark:text-blue-300 transition-colors whitespace-nowrap shrink-0"
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-[#1D4ED8] dark:text-blue-400" />
-              <span className="hidden sm:inline">{t.actions.syncGoogleSheets}</span>
-              <span className="sm:hidden">Sheets</span>
-            </button>
-
+          <div className="flex items-center gap-3 shrink-0">
             <button
               type="button"
               onClick={() => {
@@ -825,7 +707,6 @@ function AppContent() {
               contributions={contributions}
               centerSettings={centerSettings}
               lang={lang}
-              onOpenSheetsSync={() => setSheetsModalOpen(true)}
             />
           )}
 
@@ -840,7 +721,6 @@ function AppContent() {
               onSaveSettings={handleSaveSettings}
               onGrantAdmin={handleGrantAdmin}
               onRevokeAdmin={handleRevokeAdmin}
-              onOpenSheetsSync={() => setSheetsModalOpen(true)}
             />
           )}
         </main>
@@ -874,18 +754,6 @@ function AppContent() {
         preselectedMember={preselectedMember}
         suggestedReceiptNo={suggestedReceiptNo}
         lang={lang}
-      />
-
-      <GoogleSheetsSyncModal
-        isOpen={sheetsModalOpen}
-        onClose={() => setSheetsModalOpen(false)}
-        members={members}
-        contributions={contributions}
-        centerSettings={centerSettings}
-        isAdmin={isAdmin}
-        lang={lang}
-        onSaveSheetSettings={handleSaveSheetSettings}
-        onImportFromSheet={handleImportFromSheet}
       />
     </div>
   );

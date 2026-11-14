@@ -346,7 +346,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-50/70 dark:bg-slate-950/50">
+                <tr className="border-b border-slate-200 dark:border-[#1B3158] text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-50/70 dark:bg-[#060E1F]/60">
                   <th className="py-2.5 px-4">{t.labels.receiptNo}</th>
                   <th className="py-2.5 px-4">{t.labels.fullName}</th>
                   <th className="py-2.5 px-4">{t.labels.ethiopianMonth}</th>
@@ -356,11 +356,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <th className="py-2.5 px-4 text-right">{t.labels.actions}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 text-xs">
+              <tbody className="divide-y divide-slate-100 dark:divide-[#1B3158]/80 text-xs">
                 {recentContributions.map((c) => (
                   <tr
                     key={c.id}
-                    className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
+                    className="hover:bg-slate-50 dark:hover:bg-[#13294E]/50 transition-colors"
                   >
                     <td className="py-2.5 px-4 font-mono-tabular font-semibold text-slate-700 dark:text-slate-300">
                       {c.receiptNumber}

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { signInWithPopup } from 'firebase/auth';
 import { BookOpenCheck, FileSpreadsheet, Receipt, ShieldCheck } from 'lucide-react';
-import { auth, googleProvider, setCachedGoogleAccessToken } from '../firebase';
+import { auth, googleProvider } from '../firebase';
 import { Language, TRANSLATIONS } from '../i18n';
 
 interface AuthGateProps {
@@ -18,11 +18,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ lang, onToggleLang }) => {
     setLoading(true);
     setError(null);
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      if (credential?.accessToken) {
-        setCachedGoogleAccessToken(credential.accessToken);
-      }
+      await signInWithPopup(auth, googleProvider);
     } catch (err) {
       const message = err instanceof Error ? err.message : t.auth.popupError;
       setError(message);
@@ -73,7 +69,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ lang, onToggleLang }) => {
 
           <div className="grid sm:grid-cols-3 gap-4 pt-2">
             <div className="p-4 rounded-xl border border-slate-200 dark:border-[#1B3158] bg-white dark:bg-[#0B1933]">
-              <BookOpenCheck className="w-5 h-5 text-[#1D4ED8] dark:text-blue-400 mb-2.5" />
+              <BookOpenCheck className="w-5 h-5 text-[#1E3A8A] dark:text-blue-400 mb-2.5" />
               <div className="text-sm font-semibold text-slate-900 dark:text-white">
                 {lang === 'om' ? 'Galmee Miseensotaa' : 'Member Registry'}
               </div>
@@ -85,7 +81,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ lang, onToggleLang }) => {
             </div>
 
             <div className="p-4 rounded-xl border border-slate-200 dark:border-[#1B3158] bg-white dark:bg-[#0B1933]">
-              <Receipt className="w-5 h-5 text-amber-600 dark:text-amber-400 mb-2.5" />
+              <Receipt className="w-5 h-5 text-[#1E3A8A] dark:text-blue-400 mb-2.5" />
               <div className="text-sm font-semibold text-slate-900 dark:text-white">
                 {lang === 'om' ? 'Nagahee PDF' : 'Digital Receipts'}
               </div>
@@ -97,14 +93,14 @@ export const AuthGate: React.FC<AuthGateProps> = ({ lang, onToggleLang }) => {
             </div>
 
             <div className="p-4 rounded-xl border border-slate-200 dark:border-[#1B3158] bg-white dark:bg-[#0B1933]">
-              <FileSpreadsheet className="w-5 h-5 text-sky-600 dark:text-sky-400 mb-2.5" />
+              <FileSpreadsheet className="w-5 h-5 text-[#1E3A8A] dark:text-blue-400 mb-2.5" />
               <div className="text-sm font-semibold text-slate-900 dark:text-white">
-                {lang === 'om' ? 'Google Sheets Sync' : 'Google Sheets Sync'}
+                {lang === 'om' ? 'Gabaasa Bara Eth.' : 'Ethiopian Calendar'}
               </div>
               <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                 {lang === 'om'
-                  ? 'Fulbaana hanga Qaammeetti hordoffii & wal-simsiisa.'
-                  : '13-month Ethiopian ledger & Sheets sync.'}
+                  ? 'Fulbaana hanga Qaammeetti hordoffii guutuu.'
+                  : 'Full 13-month Ethiopian ledger analytics.'}
               </div>
             </div>
           </div>
@@ -121,7 +117,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ lang, onToggleLang }) => {
                 />
                 <div>
                   <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                    <ShieldCheck className="w-4 h-4 text-[#1D4ED8] dark:text-blue-400" />
+                    <ShieldCheck className="w-4 h-4 text-[#1E3A8A] dark:text-blue-400" />
                     <span>{t.auth.securityNote}</span>
                   </div>
                   <h2 className="text-xl font-bold text-slate-900 dark:text-white">
@@ -168,7 +164,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ lang, onToggleLang }) => {
         </div>
       </main>
 
-      <footer className="w-full max-w-6xl mx-auto px-6 py-5 border-t border-slate-200 dark:border-[#1B3158] flex flex-wrap items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400">
+      <footer className="w-full max-w-6xl mx-auto px-6 py-5 border-t border-slate-200 dark:border-[#1B3158]/80 flex flex-wrap items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400">
         <span>{t.centerDefaultName}</span>
         <span>CBE · Telebirr · Awash · CBE Birr</span>
       </footer>
