@@ -39,6 +39,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   }, [contributions, currentEth.year]);
 
   const [selectedYear, setSelectedYear] = useState<number>(currentEth.year);
+  const [selectedMonth, setSelectedMonth] = useState<string>(currentEth.month);
 
   const filteredMembers = useMemo(
     () => members.filter((m) => m.status === 'active'),
@@ -51,6 +52,16 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         (c) => c.status !== 'voided' && c.ethiopianYear === selectedYear
       ),
     [contributions, selectedYear]
+  );
+
+  const monthContributions = useMemo(
+    () => yearContributions.filter((c) => c.ethiopianMonth === selectedMonth),
+    [yearContributions, selectedMonth]
+  );
+
+  const monthTotal = useMemo(
+    () => monthContributions.reduce((sum, c) => sum + c.amountETB, 0),
+    [monthContributions]
   );
 
   const paymentLookup = useMemo(() => {
@@ -92,68 +103,139 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       </div>
 
       {/* Export Actions & Filters */}
-      <div className="rounded-xl border border-slate-200 dark:border-[#1B3158] bg-white dark:bg-[#0B1933] p-5 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <div>
-            <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">
-              {t.labels.ethiopianYear}
-            </label>
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
-              className="rounded-lg border border-slate-200 dark:border-[#1B3158] bg-white dark:bg-[#060E1F] px-3 py-2 text-xs font-mono-tabular text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
-            >
-              {availableYears.map((yr) => (
-                <option key={yr} value={yr}>
-                  {yr} E.C.
-                </option>
-              ))}
-            </select>
+      <div className="rounded-xl border border-slate-200 dark:border-[#1B3158] bg-white dark:bg-[#0B1933] p-5 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                {t.labels.ethiopianYear}
+              </label>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                className="rounded-lg border border-slate-200 dark:border-[#1B3158] bg-white dark:bg-[#060E1F] px-3 py-2 text-xs font-mono-tabular text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
+              >
+                {availableYears.map((yr) => (
+                  <option key={yr} value={yr}>
+                    {yr} E.C.
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="pl-2">
+              <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                {selectedYear} E.C. {t.kpi.totalCollected}
+              </div>
+              <div className="text-base font-bold font-mono-tabular text-[#1E3A8A] dark:text-blue-400">
+                {formatETB(yearTotal)}
+              </div>
+            </div>
           </div>
 
-          <div className="pl-2">
-            <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-              {selectedYear} E.C. {t.kpi.totalCollected}
-            </div>
-            <div className="text-base font-bold font-mono-tabular text-[#1E3A8A] dark:text-blue-400">
-              {formatETB(yearTotal)}
-            </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                void downloadLedgerReportPDF(
+                  yearContributions,
+                  filteredMembers,
+                  centerSettings,
+                  `${selectedYear} E.C.`,
+                  lang
+                )
+              }
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#0B1F3A] hover:bg-[#132f57] dark:bg-blue-700 dark:hover:bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white whitespace-nowrap shrink-0"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>{t.actions.exportPDF}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => downloadContributionsCSV(yearContributions)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-[#1B3158] px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-[#13294E] whitespace-nowrap shrink-0"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              <span>{t.actions.exportCSV} (Buusii)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => downloadMembersCSV(members)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-[#1B3158] px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-[#13294E] whitespace-nowrap shrink-0"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>{t.actions.exportCSV} (Miseensa)</span>
+            </button>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() =>
-              void downloadLedgerReportPDF(
-                yearContributions,
-                filteredMembers,
-                centerSettings,
-                `${selectedYear} E.C.`,
-                lang
-              )
-            }
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[#0B1F3A] hover:bg-[#132f57] dark:bg-blue-700 dark:hover:bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white whitespace-nowrap shrink-0"
-          >
-            <FileText className="w-3.5 h-3.5" />
-            <span>{t.actions.exportPDF}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => downloadContributionsCSV(yearContributions)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-[#1B3158] px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-[#13294E] whitespace-nowrap shrink-0"
-          >
-            <FileSpreadsheet className="w-3.5 h-3.5" />
-            <span>{t.actions.exportCSV} (Buusii)</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => downloadMembersCSV(members)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-[#1B3158] px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-[#13294E] whitespace-nowrap shrink-0"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>{t.actions.exportCSV} (Miseensa)</span>
-          </button>
+        {/* End-of-Month Accounting Export */}
+        <div className="pt-4 border-t border-slate-100 dark:border-[#1B3158] flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                {t.labels.monthlyAccountingTitle}
+              </label>
+              <select
+                aria-label={t.labels.ethiopianMonth}
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="rounded-lg border border-slate-200 dark:border-[#1B3158] bg-white dark:bg-[#060E1F] px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
+              >
+                {ETHIOPIAN_MONTHS.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="pl-2">
+              <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                {selectedMonth} {selectedYear} E.C. · {monthContributions.length}{' '}
+                {lang === 'om' ? 'galmee' : 'records'}
+              </div>
+              <div className="text-sm font-bold font-mono-tabular text-slate-900 dark:text-white">
+                {formatETB(monthTotal)}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={monthContributions.length === 0}
+              onClick={() =>
+                void downloadLedgerReportPDF(
+                  monthContributions,
+                  filteredMembers,
+                  centerSettings,
+                  `${selectedMonth} ${selectedYear} E.C.`,
+                  lang,
+                  `Al-Furqaan-${selectedMonth}-${selectedYear}-EC.pdf`
+                )
+              }
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[#1E3A8A]/30 bg-blue-50/70 dark:bg-blue-950/40 px-3.5 py-2 text-xs font-semibold text-[#0B1F3A] dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shrink-0"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>{t.labels.exportMonthPDF}</span>
+            </button>
+            <button
+              type="button"
+              disabled={monthContributions.length === 0}
+              onClick={() =>
+                downloadContributionsCSV(
+                  monthContributions,
+                  `Al-Furqaan-${selectedMonth}-${selectedYear}-EC.csv`,
+                  true
+                )
+              }
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-[#1B3158] px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-[#13294E] disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shrink-0"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              <span>{t.labels.exportMonthExcel}</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -183,18 +265,20 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse table-auto">
               <thead>
                 <tr className="border-b border-slate-200 dark:border-[#1B3158] text-[11px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-50/70 dark:bg-[#060E1F]/60">
-                  <th className="py-2.5 px-3 sticky left-0 bg-slate-50 dark:bg-[#060E1F] z-10">
+                  <th className="py-2.5 px-3 sticky left-0 bg-slate-50 dark:bg-[#060E1F] z-10 border-r border-slate-200 dark:border-[#1B3158] min-w-[170px]">
                     {t.labels.fullName}
                   </th>
                   {ETHIOPIAN_MONTHS.map((m) => (
-                    <th key={m} className="py-2.5 px-2 text-center whitespace-nowrap">
-                      {m.slice(0, 4)}
+                    <th key={m} className="py-2.5 px-1.5 text-center whitespace-nowrap">
+                      {m.slice(0, 3)}
                     </th>
                   ))}
-                  <th className="py-2.5 px-3 text-right">{t.kpi.totalCollected}</th>
+                  <th className="py-2.5 px-3 text-right whitespace-nowrap border-l border-slate-200 dark:border-[#1B3158]">
+                    {t.kpi.totalCollected}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-[#1B3158]/80 text-xs">
@@ -202,7 +286,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                   let memberYearSum = 0;
                   return (
                     <tr key={member.id} className="hover:bg-slate-50 dark:hover:bg-[#13294E]/50">
-                      <td className="py-2.5 px-3 sticky left-0 bg-white dark:bg-[#0B1933] z-10 whitespace-nowrap">
+                      <td className="py-2 px-3 sticky left-0 bg-white dark:bg-[#0B1933] z-10 whitespace-nowrap border-r border-slate-100 dark:border-[#1B3158]">
                         <div className="font-semibold text-slate-900 dark:text-white">
                           {member.fullName}
                         </div>
@@ -216,7 +300,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                         return (
                           <td
                             key={month}
-                            className="py-2.5 px-2 text-center font-mono-tabular"
+                            className="py-2 px-1.5 text-center font-mono-tabular text-[11px] whitespace-nowrap"
                             title={paidAmount > 0 ? formatETB(paidAmount) : t.labels.unpaid}
                           >
                             {paidAmount > 0 ? (
@@ -231,7 +315,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                           </td>
                         );
                       })}
-                      <td className="py-2.5 px-3 text-right font-mono-tabular font-bold text-slate-900 dark:text-white whitespace-nowrap">
+                      <td className="py-2 px-3 text-right font-mono-tabular font-bold text-slate-900 dark:text-white whitespace-nowrap border-l border-slate-100 dark:border-[#1B3158]">
                         {formatETB(memberYearSum)}
                       </td>
                     </tr>

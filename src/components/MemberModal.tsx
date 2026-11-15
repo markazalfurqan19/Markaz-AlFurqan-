@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
-import { Member, MemberStatus, SCHEMA_LIMITS } from '../types';
+import { Member, MemberCategory, MemberStatus, SCHEMA_LIMITS } from '../types';
 import { Language, TRANSLATIONS } from '../i18n';
 
 interface MemberModalProps {
@@ -29,6 +29,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
   const [memberId, setMemberId] = useState('');
   const [monthlyPledgeETB, setMonthlyPledgeETB] = useState('500');
   const [status, setStatus] = useState<MemberStatus>('active');
+  const [category, setCategory] = useState<MemberCategory>('supporter');
   const [city, setCity] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,6 +43,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
         setMemberId(editingMember.memberId);
         setMonthlyPledgeETB(String(editingMember.monthlyPledgeETB));
         setStatus(editingMember.status);
+        setCategory(editingMember.category || 'supporter');
         setCity(editingMember.city || '');
       } else {
         setFullName('');
@@ -50,6 +52,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
         setMemberId(suggestedCode);
         setMonthlyPledgeETB('500');
         setStatus('active');
+        setCategory('supporter');
         setCity('');
       }
       setError(null);
@@ -88,6 +91,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
         memberId: cleanCode,
         monthlyPledgeETB: pledge,
         status,
+        category,
         city: city.trim().slice(0, SCHEMA_LIMITS.MEMBER_CITY),
       });
       onClose();
@@ -206,6 +210,21 @@ export const MemberModal: React.FC<MemberModalProps> = ({
                 <option value="active">{t.status.active}</option>
                 <option value="inactive">{t.status.inactive}</option>
                 <option value="suspended">{t.status.suspended}</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                {t.labels.category} *
+              </label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value as MemberCategory)}
+                className="w-full rounded-lg border border-slate-300 dark:border-[#1B3158] bg-white dark:bg-[#060E1F] px-3.5 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]"
+              >
+                <option value="student">{t.memberCategories.student}</option>
+                <option value="teacher">{t.memberCategories.teacher}</option>
+                <option value="supporter">{t.memberCategories.supporter}</option>
               </select>
             </div>
 

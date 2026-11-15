@@ -6,7 +6,8 @@
 3. Contributions (`/contributions/{contributionId}`) require positive `amountETB > 0`, valid `paymentMethod` and `status`, `recordedBy == request.auth.uid` on create, immutable `recordedBy` on updates, and non-admins can only update editable payment fields (`amountETB`, `ethiopianMonth`, `ethiopianYear`, `paymentMethod`, `transactionReference`, `notes`, `status`, `updatedAt`).
 4. Admin roles (`/admins/{adminId}`) can only be created, updated, or deleted by verified owners (`isOwner()`). Non-owners can only read their own role document (`adminId == request.auth.token.email`).
 5. Center settings (`/settings/{settingId}`) can only be read (`get`) by verified signed-in users and modified/listed only by admins/owners.
-6. Every document ID and string field enforces strict `hasAll` / `hasOnly` key allowlists, type checks, and `.size()` boundary caps.
+6. Audit logs (`/audit_logs/{logId}`) are strictly append-only (`update` and `delete` denied for all users), enforce server-side timestamp (`request.time`), enforce `actorUid == request.auth.uid`, restrict admin/settings audit events to verified owners/admins, and restrict non-admin reads/lists to `resource.data.actorUid == request.auth.uid`.
+7. Every document ID and string field enforces strict `hasAll` / `hasOnly` key allowlists, type checks, and `.size()` boundary caps.
 
 ## 2. Dirty Dozen Payloads (Must All Return PERMISSION_DENIED)
 1. Unauthenticated read of `/members/ALF-M-001`.
@@ -21,3 +22,4 @@
 10. Injecting a 2000-character string into `memberId` or `fullName` (Resource Poisoning).
 11. Non-admin deleting a member or contribution document.
 12. Non-admin modifying `/settings/center`.
+13. Any user attempting to update, forge `timestamp`, spoof `actorUid`, or delete an `/audit_logs/{logId}` entry.

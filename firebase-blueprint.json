@@ -39,6 +39,11 @@
           "description": "Membership status",
           "enum": ["active", "inactive", "suspended"]
         },
+        "category": {
+          "type": "string",
+          "description": "Member category (student, teacher, supporter)",
+          "enum": ["student", "teacher", "supporter"]
+        },
         "city": {
           "type": "string",
           "description": "City or residential location",
@@ -109,6 +114,16 @@
           "type": "string",
           "description": "Bank/Telebirr transaction slip or reference code",
           "maxLength": 100
+        },
+        "proofFileUrl": {
+          "type": "string",
+          "description": "Compressed base64 data URL of uploaded payment receipt image or file",
+          "maxLength": 250000
+        },
+        "proofFileName": {
+          "type": "string",
+          "description": "Original filename of uploaded payment proof",
+          "maxLength": 120
         },
         "notes": {
           "type": "string",
@@ -191,6 +206,11 @@
           "description": "Official bank account and Telebirr merchant details",
           "maxLength": 500
         },
+        "bankInfoImage": {
+          "type": "string",
+          "description": "Compressed base64 data URL of official bank or QR info image",
+          "maxLength": 250000
+        },
         "monthlyTargetETB": {
           "type": "number",
           "description": "Monthly financial contribution target in Ethiopian Birr"
@@ -207,6 +227,70 @@
         }
       },
       "required": ["centerName"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Immutable accountability log recording key member, contribution, settings, and admin role actions",
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "description": "Type of audited action",
+          "enum": [
+            "member_created",
+            "member_updated",
+            "member_deleted",
+            "contribution_created",
+            "contribution_updated",
+            "contribution_verified",
+            "contribution_deleted",
+            "admin_granted",
+            "admin_revoked",
+            "settings_updated"
+          ]
+        },
+        "targetType": {
+          "type": "string",
+          "description": "Domain entity category affected by the action",
+          "enum": ["member", "contribution", "admin", "settings"]
+        },
+        "targetId": {
+          "type": "string",
+          "description": "Identifier or code of the target record",
+          "maxLength": 128
+        },
+        "targetLabel": {
+          "type": "string",
+          "description": "Human-readable label for the target record",
+          "maxLength": 160
+        },
+        "details": {
+          "type": "string",
+          "description": "Summary of changes or event metadata",
+          "maxLength": 300
+        },
+        "actorUid": {
+          "type": "string",
+          "description": "UID of the authenticated user performing the action",
+          "maxLength": 128
+        },
+        "actorEmail": {
+          "type": "string",
+          "description": "Email of the user performing the action",
+          "maxLength": 120
+        },
+        "actorName": {
+          "type": "string",
+          "description": "Display name of the user performing the action",
+          "maxLength": 120
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of when the audited action occurred"
+        }
+      },
+      "required": ["action", "targetType", "targetId", "targetLabel", "actorUid", "actorEmail", "timestamp"]
     }
   },
   "firestore": {
@@ -225,6 +309,10 @@
     "/settings/{settingId}": {
       "schema": "CenterSetting",
       "description": "Al-Furqaan center global settings and bank details"
+    },
+    "/audit_logs/{logId}": {
+      "schema": "AuditLog",
+      "description": "Append-only audit log of key system actions"
     }
   }
 }

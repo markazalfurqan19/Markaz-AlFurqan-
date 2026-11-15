@@ -170,7 +170,8 @@ export async function downloadLedgerReportPDF(
   members: Member[],
   center: CenterSetting,
   filterLabel: string,
-  lang: Language = 'om'
+  lang: Language = 'om',
+  customFileName?: string
 ) {
   const t = TRANSLATIONS[lang];
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
@@ -227,7 +228,7 @@ export async function downloadLedgerReportPDF(
         t.labels.fullName,
         `${t.labels.ethiopianMonth} / Bara`,
         t.labels.paymentMethod,
-        t.labels.txReference,
+        t.labels.proofColumn,
         t.labels.statusLabel,
         t.labels.amountETB,
       ],
@@ -238,13 +239,13 @@ export async function downloadLedgerReportPDF(
       sanitizePdfText(c.memberName),
       `${c.ethiopianMonth} ${c.ethiopianYear}`,
       sanitizePdfText(t.paymentMethods[c.paymentMethod] || c.paymentMethod),
-      c.transactionReference || '-',
+      sanitizePdfText(c.proofFileName || c.transactionReference || '-'),
       sanitizePdfText(t.status[c.status] || c.status),
       formatETB(c.amountETB),
     ]),
   });
 
-  doc.save(`Al-Furqaan-Report-${new Date().toISOString().slice(0, 10)}.pdf`);
+  doc.save(customFileName || `Al-Furqaan-Report-${new Date().toISOString().slice(0, 10)}.pdf`);
 }
 
 function escapeCSV(val: string | number | undefined): string {
@@ -255,7 +256,11 @@ function escapeCSV(val: string | number | undefined): string {
   return s;
 }
 
-export function downloadContributionsCSV(contributions: Contribution[]) {
+export function downloadContributionsCSV(
+  contributions: Contribution[],
+  customFileName?: string,
+  includeTotalRow = false
+) {
   const headers = [
     'ReceiptNumber',
     'MemberID',
@@ -264,7 +269,7 @@ export function downloadContributionsCSV(contributions: Contribution[]) {
     'EthiopianMonth',
     'EthiopianYear',
     'PaymentMethod',
-    'TransactionReference',
+    'ProofOrReference',
     'Status',
     'Notes',
     'CreatedAt',
@@ -277,26 +282,48 @@ export function downloadContributionsCSV(contributions: Contribution[]) {
     escapeCSV(c.ethiopianMonth),
     escapeCSV(c.ethiopianYear),
     escapeCSV(c.paymentMethod),
-    escapeCSV(c.transactionReference),
+    escapeCSV(c.proofFileName || c.transactionReference),
     escapeCSV(c.status),
     escapeCSV(c.notes),
     escapeCSV(c.createdAt),
   ]);
+
+  if (includeTotalRow) {
+    const validTotal = contributions
+      .filter((c) => c.status !== 'voided')
+      .reduce((sum, c) => sum + c.amountETB, 0);
+    rows.push([
+      'TOTAL',
+      '',
+      `${contributions.length} records`,
+      escapeCSV(validTotal),
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+    ]);
+  }
+
   const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `al-furqaan-contributions-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.download =
+    customFileName || `al-furqaan-contributions-${new Date().toISOString().slice(0, 10)}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }
 
 export function downloadMembersCSV(members: Member[]) {
   const headers = [
-    'MemberCode',
+    'MemberID',
     'FullName',
     'PhoneNumber',
+    'Category',
     'Email',
     'City',
     'MonthlyPledgeETB',
@@ -307,6 +334,7 @@ export function downloadMembersCSV(members: Member[]) {
     escapeCSV(m.memberId),
     escapeCSV(m.fullName),
     escapeCSV(m.phoneNumber),
+    escapeCSV(m.category || 'supporter'),
     escapeCSV(m.email),
     escapeCSV(m.city),
     escapeCSV(m.monthlyPledgeETB),
@@ -365,7 +393,8 @@ export function formatPrintableReceipt(
     memberId: contribution.memberId,
     ethiopianPeriod: `${contribution.ethiopianMonth} ${contribution.ethiopianYear} E.C.`,
     paymentMethodLabel: t.paymentMethods[contribution.paymentMethod] || contribution.paymentMethod,
-    transactionReference: contribution.transactionReference || '—',
+    transactionReference:
+      contribution.proofFileName || contribution.transactionReference || '—',
     statusLabel: t.status[contribution.status] || contribution.status,
     formattedAmount: formatETB(contribution.amountETB),
     notes: contribution.notes || '—',

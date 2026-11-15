@@ -5,11 +5,16 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  limit,
   onSnapshot,
+  orderBy,
   query,
+  serverTimestamp,
   setDoc,
+  Timestamp,
   updateDoc,
   where,
+  writeBatch,
 } from 'firebase/firestore';
 import {
   BarChart3,
@@ -29,6 +34,9 @@ import { auth, db, handleFirestoreError, OperationType } from './firebase';
 import {
   AdminRole,
   AdminRoleType,
+  AuditAction,
+  AuditLog,
+  AuditTargetType,
   CenterSetting,
   Contribution,
   HARDCODED_OWNER_EMAILS,
@@ -63,6 +71,7 @@ function AppContent() {
   const [members, setMembers] = useState<Member[]>([]);
   const [contributions, setContributions] = useState<Contribution[]>([]);
   const [admins, setAdmins] = useState<AdminRole[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
 
   const [lang, setLang] = useState<Language>(() => {
@@ -78,6 +87,7 @@ function AppContent() {
     phone: '',
     email: 'markazalfurqan19@gmail.com',
     bankAccountDetails: '',
+    bankInfoImage: '',
     monthlyTargetETB: 50000,
   });
 
@@ -122,6 +132,7 @@ function AppContent() {
         setMembers([]);
         setContributions([]);
         setAdmins([]);
+        setAuditLogs([]);
       }
     });
     return () => unsub();
@@ -232,6 +243,7 @@ function AppContent() {
             phone: data.phone || '',
             email: data.email || '',
             bankAccountDetails: data.bankAccountDetails || '',
+            bankInfoImage: data.bankInfoImage || '',
             monthlyTargetETB: data.monthlyTargetETB ?? 50000,
           });
         }
@@ -254,10 +266,55 @@ function AppContent() {
       );
     }
 
+    const auditQuery = isAdmin
+      ? query(collection(db, 'audit_logs'), orderBy('timestamp', 'desc'), limit(100))
+      : query(collection(db, 'audit_logs'), where('actorUid', '==', user.uid), limit(100));
+
+    const unsubAuditLogs = onSnapshot(
+      auditQuery,
+      (snap) => {
+        const list: AuditLog[] = snap.docs.map((d) => {
+          const raw = d.data() as {
+            action: AuditAction;
+            targetType: AuditTargetType;
+            targetId: string;
+            targetLabel: string;
+            details?: string;
+            actorUid: string;
+            actorEmail: string;
+            actorName?: string;
+            timestamp?: Timestamp | { toDate?: () => Date } | string | null;
+          };
+          let createdAt = '';
+          if (raw.timestamp && typeof raw.timestamp === 'object' && 'toDate' in raw.timestamp && typeof raw.timestamp.toDate === 'function') {
+            createdAt = raw.timestamp.toDate().toISOString();
+          } else if (typeof raw.timestamp === 'string') {
+            createdAt = raw.timestamp;
+          }
+          return {
+            id: d.id,
+            action: raw.action,
+            targetType: raw.targetType,
+            targetId: raw.targetId,
+            targetLabel: raw.targetLabel,
+            details: raw.details,
+            actorUid: raw.actorUid,
+            actorEmail: raw.actorEmail,
+            actorName: raw.actorName,
+            createdAt,
+          };
+        });
+        list.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+        setAuditLogs(list);
+      },
+      (error) => handleFirestoreError(error, OperationType.LIST, 'audit_logs')
+    );
+
     return () => {
       unsubMembers();
       unsubContributions();
       unsubSettings();
+      unsubAuditLogs();
       if (unsubAdmins) unsubAdmins();
     };
   }, [authReady, user, roleResolved, isAdmin, isOwner]);
@@ -272,6 +329,47 @@ function AppContent() {
     const nextSeq = contributions.length + 1;
     return `ALF-REC-${year}-${String(nextSeq).padStart(4, '0')}`;
   }, [contributions.length]);
+
+  const buildAuditPayload = (params: {
+    action: AuditAction;
+    targetType: AuditTargetType;
+    targetId: string;
+    targetLabel: string;
+    details?: string;
+  }) => {
+    if (!user) return null;
+    const actorEmail = (user.email || user.uid).slice(0, SCHEMA_LIMITS.AUDIT_ACTOR_EMAIL);
+    const actorName = (user.displayName || actorEmail).slice(0, SCHEMA_LIMITS.AUDIT_ACTOR_NAME);
+    return {
+      action: params.action,
+      targetType: params.targetType,
+      targetId: params.targetId.slice(0, SCHEMA_LIMITS.AUDIT_TARGET_ID) || 'unknown',
+      targetLabel: params.targetLabel.slice(0, SCHEMA_LIMITS.AUDIT_TARGET_LABEL) || 'Record',
+      details: (params.details || '').slice(0, SCHEMA_LIMITS.AUDIT_DETAILS),
+      actorUid: user.uid.slice(0, SCHEMA_LIMITS.AUDIT_ACTOR_UID),
+      actorEmail,
+      actorName,
+      timestamp: serverTimestamp(),
+    };
+  };
+
+  const recordAuditLog = async (params: {
+    action: AuditAction;
+    targetType: AuditTargetType;
+    targetId: string;
+    targetLabel: string;
+    details?: string;
+  }) => {
+    const payload = buildAuditPayload(params);
+    if (!payload) return;
+    const logId = sanitizeDocId(`log-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`);
+    const path = `audit_logs/${logId}`;
+    try {
+      await setDoc(doc(db, 'audit_logs', logId), payload);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.CREATE, path);
+    }
+  };
 
   // Firestore Mutations
   const handleSaveMember = async (
@@ -289,12 +387,20 @@ function AppContent() {
           email: data.email || '',
           monthlyPledgeETB: data.monthlyPledgeETB,
           status: data.status,
+          category: data.category || 'supporter',
           city: data.city || '',
           updatedAt: now,
         });
       } catch (err) {
         handleFirestoreError(err, OperationType.UPDATE, path);
       }
+      await recordAuditLog({
+        action: 'member_updated',
+        targetType: 'member',
+        targetId: editingMember.memberId,
+        targetLabel: data.fullName,
+        details: `${data.category || 'supporter'} · ${data.status} · ${data.monthlyPledgeETB} ETB`,
+      });
     } else {
       const docId = sanitizeDocId(`${data.memberId}-${Date.now().toString(36)}`);
       const path = `members/${docId}`;
@@ -306,6 +412,7 @@ function AppContent() {
           memberId: data.memberId,
           monthlyPledgeETB: data.monthlyPledgeETB,
           status: data.status,
+          category: data.category || 'supporter',
           city: data.city || '',
           createdBy: user.uid,
           createdByEmail: (user.email || '').slice(0, SCHEMA_LIMITS.ADMIN_EMAIL),
@@ -315,6 +422,13 @@ function AppContent() {
       } catch (err) {
         handleFirestoreError(err, OperationType.CREATE, path);
       }
+      await recordAuditLog({
+        action: 'member_created',
+        targetType: 'member',
+        targetId: data.memberId,
+        targetLabel: data.fullName,
+        details: `${data.category || 'supporter'} · ${data.phoneNumber} · ${data.monthlyPledgeETB} ETB`,
+      });
     }
   };
 
@@ -325,10 +439,31 @@ function AppContent() {
     } catch (err) {
       handleFirestoreError(err, OperationType.DELETE, path);
     }
+    await recordAuditLog({
+      action: 'member_deleted',
+      targetType: 'member',
+      targetId: member.memberId,
+      targetLabel: member.fullName,
+      details: `${member.phoneNumber} · ${member.status}`,
+    });
+  };
+
+  const generateSequentialReceiptNo = (baseReceipt: string, offset: number): string => {
+    if (offset === 0) return baseReceipt;
+    const match = baseReceipt.match(/^(.*?)(\d+)$/);
+    if (match) {
+      const prefix = match[1];
+      const numStr = match[2];
+      const nextVal = String(Number(numStr) + offset).padStart(numStr.length, '0');
+      return `${prefix}${nextVal}`.slice(0, SCHEMA_LIMITS.CONTRIBUTION_RECEIPT);
+    }
+    return `${baseReceipt}-${offset + 1}`.slice(0, SCHEMA_LIMITS.CONTRIBUTION_RECEIPT);
   };
 
   const handleSaveContribution = async (
-    data: Omit<Contribution, 'id' | 'recordedBy' | 'createdAt' | 'updatedAt'>
+    data: Omit<Contribution, 'id' | 'recordedBy' | 'createdAt' | 'updatedAt'> & {
+      ethiopianMonths?: string[];
+    }
   ) => {
     if (!user) return;
     const now = new Date().toISOString();
@@ -342,6 +477,8 @@ function AppContent() {
           ethiopianYear: data.ethiopianYear,
           paymentMethod: data.paymentMethod,
           transactionReference: data.transactionReference || '',
+          proofFileUrl: data.proofFileUrl || '',
+          proofFileName: data.proofFileName || '',
           notes: data.notes || '',
           status: data.status,
           updatedAt: now,
@@ -349,7 +486,22 @@ function AppContent() {
       } catch (err) {
         handleFirestoreError(err, OperationType.UPDATE, path);
       }
-    } else {
+      await recordAuditLog({
+        action: 'contribution_updated',
+        targetType: 'contribution',
+        targetId: editingContribution.receiptNumber,
+        targetLabel: editingContribution.memberName,
+        details: `${data.amountETB} ETB · ${data.ethiopianMonth} ${data.ethiopianYear} · ${data.status}`,
+      });
+      return;
+    }
+
+    const monthsToSave =
+      data.ethiopianMonths && data.ethiopianMonths.length > 0
+        ? data.ethiopianMonths
+        : [data.ethiopianMonth];
+
+    if (monthsToSave.length === 1) {
       const docId = sanitizeDocId(`${data.receiptNumber}-${Date.now().toString(36)}`);
       const path = `contributions/${docId}`;
       try {
@@ -358,10 +510,12 @@ function AppContent() {
           memberName: data.memberName,
           receiptNumber: data.receiptNumber,
           amountETB: data.amountETB,
-          ethiopianMonth: data.ethiopianMonth,
+          ethiopianMonth: monthsToSave[0],
           ethiopianYear: data.ethiopianYear,
           paymentMethod: data.paymentMethod,
           transactionReference: data.transactionReference || '',
+          proofFileUrl: data.proofFileUrl || '',
+          proofFileName: data.proofFileName || '',
           notes: data.notes || '',
           recordedBy: user.uid,
           status: data.status,
@@ -371,6 +525,56 @@ function AppContent() {
       } catch (err) {
         handleFirestoreError(err, OperationType.CREATE, path);
       }
+      await recordAuditLog({
+        action: 'contribution_created',
+        targetType: 'contribution',
+        targetId: data.receiptNumber,
+        targetLabel: data.memberName,
+        details: `${data.amountETB} ETB · ${monthsToSave[0]} ${data.ethiopianYear} · ${data.paymentMethod}`,
+      });
+      return;
+    }
+
+    const batch = writeBatch(db);
+    const stamp = Date.now().toString(36);
+    monthsToSave.forEach((month, idx) => {
+      const recNo = generateSequentialReceiptNo(data.receiptNumber, idx);
+      const docId = sanitizeDocId(`${recNo}-${stamp}-${idx}`);
+      batch.set(doc(db, 'contributions', docId), {
+        memberId: data.memberId,
+        memberName: data.memberName,
+        receiptNumber: recNo,
+        amountETB: data.amountETB,
+        ethiopianMonth: month.slice(0, SCHEMA_LIMITS.CONTRIBUTION_MONTH),
+        ethiopianYear: data.ethiopianYear,
+        paymentMethod: data.paymentMethod,
+        transactionReference: data.transactionReference || '',
+        proofFileUrl: data.proofFileUrl || '',
+        proofFileName: data.proofFileName || '',
+        notes: data.notes || '',
+        recordedBy: user.uid,
+        status: data.status,
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+
+    const batchAuditPayload = buildAuditPayload({
+      action: 'contribution_created',
+      targetType: 'contribution',
+      targetId: data.receiptNumber,
+      targetLabel: data.memberName,
+      details: `${monthsToSave.length} months (${monthsToSave.join(', ')}) · ${data.amountETB} ETB/mo · ${data.ethiopianYear}`,
+    });
+    if (batchAuditPayload) {
+      const auditId = sanitizeDocId(`log-${stamp}-${Math.random().toString(36).slice(2, 7)}`);
+      batch.set(doc(db, 'audit_logs', auditId), batchAuditPayload);
+    }
+
+    try {
+      await batch.commit();
+    } catch (err) {
+      handleFirestoreError(err, OperationType.CREATE, 'contributions');
     }
   };
 
@@ -384,6 +588,13 @@ function AppContent() {
     } catch (err) {
       handleFirestoreError(err, OperationType.UPDATE, path);
     }
+    await recordAuditLog({
+      action: 'contribution_verified',
+      targetType: 'contribution',
+      targetId: c.receiptNumber,
+      targetLabel: c.memberName,
+      details: `${c.amountETB} ETB · ${c.ethiopianMonth} ${c.ethiopianYear}`,
+    });
   };
 
   const handleDeleteContribution = async (c: Contribution) => {
@@ -393,6 +604,13 @@ function AppContent() {
     } catch (err) {
       handleFirestoreError(err, OperationType.DELETE, path);
     }
+    await recordAuditLog({
+      action: 'contribution_deleted',
+      targetType: 'contribution',
+      targetId: c.receiptNumber,
+      targetLabel: c.memberName,
+      details: `${c.amountETB} ETB · ${c.ethiopianMonth} ${c.ethiopianYear}`,
+    });
   };
 
   const handleSaveSettings = async (data: CenterSetting) => {
@@ -404,6 +622,7 @@ function AppContent() {
         phone: data.phone || '',
         email: data.email || '',
         bankAccountDetails: data.bankAccountDetails || '',
+        bankInfoImage: data.bankInfoImage || '',
         monthlyTargetETB: data.monthlyTargetETB ?? 0,
         updatedBy: user.uid,
         updatedAt: new Date().toISOString(),
@@ -411,6 +630,13 @@ function AppContent() {
     } catch (err) {
       handleFirestoreError(err, OperationType.WRITE, path);
     }
+    await recordAuditLog({
+      action: 'settings_updated',
+      targetType: 'settings',
+      targetId: 'center',
+      targetLabel: data.centerName,
+      details: `Target: ${data.monthlyTargetETB ?? 0} ETB${data.bankInfoImage ? ' · Bank image attached' : ''}`,
+    });
   };
 
   const handleGrantAdmin = async (email: string, role: AdminRoleType) => {
@@ -427,15 +653,30 @@ function AppContent() {
     } catch (err) {
       handleFirestoreError(err, OperationType.WRITE, path);
     }
+    await recordAuditLog({
+      action: 'admin_granted',
+      targetType: 'admin',
+      targetId: cleanEmail,
+      targetLabel: cleanEmail,
+      details: `Role granted: ${role.toUpperCase()}`,
+    });
   };
 
   const handleRevokeAdmin = async (adminId: string) => {
+    const targetAdmin = admins.find((a) => a.id === adminId);
     const path = `admins/${adminId}`;
     try {
       await deleteDoc(doc(db, 'admins', adminId));
     } catch (err) {
       handleFirestoreError(err, OperationType.DELETE, path);
     }
+    await recordAuditLog({
+      action: 'admin_revoked',
+      targetType: 'admin',
+      targetId: adminId,
+      targetLabel: targetAdmin?.email || adminId,
+      details: `Revoked ${targetAdmin ? targetAdmin.role.toUpperCase() : 'admin'} role`,
+    });
   };
 
   if (!authReady) {
@@ -714,6 +955,7 @@ function AppContent() {
             <SettingsView
               centerSettings={centerSettings}
               admins={admins}
+              auditLogs={auditLogs}
               isAdmin={isAdmin}
               isOwner={isOwner}
               currentUserEmail={(user.email || '').toLowerCase()}

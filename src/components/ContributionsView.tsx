@@ -3,9 +3,11 @@ import {
   Calendar,
   CheckCircle2,
   Download,
+  Eye,
   FileText,
   Pencil,
   Plus,
+  Printer,
   Search,
   Trash2,
 } from 'lucide-react';
@@ -24,6 +26,8 @@ import {
   downloadLedgerReportPDF,
   downloadReceiptPDF,
 } from '../utils/pdfGenerator';
+import { PrintReceiptModal } from './PrintReceiptModal';
+import { ProofPreviewModal } from './ProofPreviewModal';
 
 interface ContributionsViewProps {
   contributions: Contribution[];
@@ -56,6 +60,8 @@ export const ContributionsView: React.FC<ContributionsViewProps> = ({
   const [statusFilter, setStatusFilter] = useState<'all' | ContributionStatus>('all');
   const [methodFilter, setMethodFilter] = useState<'all' | PaymentMethod>('all');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [printContribution, setPrintContribution] = useState<Contribution | null>(null);
+  const [proofPreview, setProofPreview] = useState<Contribution | null>(null);
 
   const availableYears = useMemo(() => {
     const yrs = new Set<number>([currentEth.year]);
@@ -77,6 +83,7 @@ export const ContributionsView: React.FC<ContributionsViewProps> = ({
           c.memberName.toLowerCase().includes(q) ||
           c.memberId.toLowerCase().includes(q) ||
           c.receiptNumber.toLowerCase().includes(q) ||
+          (c.proofFileName || '').toLowerCase().includes(q) ||
           (c.transactionReference || '').toLowerCase().includes(q)
         );
       });
@@ -337,14 +344,14 @@ export const ContributionsView: React.FC<ContributionsViewProps> = ({
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 dark:border-[#1B3158] text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-50/70 dark:bg-[#060E1F]/60">
-                  <th className="py-2.5 px-4">{t.labels.receiptNo}</th>
-                  <th className="py-2.5 px-4">{t.labels.fullName}</th>
-                  <th className="py-2.5 px-4">{t.labels.ethiopianMonth}</th>
-                  <th className="py-2.5 px-4">{t.labels.paymentMethod}</th>
-                  <th className="py-2.5 px-4">{t.labels.txReference}</th>
-                  <th className="py-2.5 px-4">{t.labels.statusLabel}</th>
-                  <th className="py-2.5 px-4 text-right">{t.labels.amountETB}</th>
-                  <th className="py-2.5 px-4 text-right">{t.labels.actions}</th>
+                  <th className="py-2.5 px-3 whitespace-nowrap">{t.labels.receiptNo}</th>
+                  <th className="py-2.5 px-3">{t.labels.fullName}</th>
+                  <th className="py-2.5 px-3 whitespace-nowrap">{t.labels.ethiopianMonth}</th>
+                  <th className="py-2.5 px-3 whitespace-nowrap">{t.labels.paymentMethod}</th>
+                  <th className="py-2.5 px-3 whitespace-nowrap">{t.labels.proofColumn}</th>
+                  <th className="py-2.5 px-3 whitespace-nowrap">{t.labels.statusLabel}</th>
+                  <th className="py-2.5 px-3 text-right whitespace-nowrap">{t.labels.amountETB}</th>
+                  <th className="py-2.5 px-3 text-right whitespace-nowrap">{t.labels.actions}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-[#1B3158]/80 text-xs">
@@ -353,10 +360,10 @@ export const ContributionsView: React.FC<ContributionsViewProps> = ({
                     key={c.id}
                     className="hover:bg-slate-50 dark:hover:bg-[#13294E]/50 transition-colors"
                   >
-                    <td className="py-2.5 px-4 font-mono-tabular font-semibold text-slate-700 dark:text-slate-300">
+                    <td className="py-2.5 px-3 font-mono-tabular font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
                       {c.receiptNumber}
                     </td>
-                    <td className="py-2.5 px-4">
+                    <td className="py-2.5 px-3">
                       <div className="font-semibold text-slate-900 dark:text-white">
                         {c.memberName}
                       </div>
@@ -364,16 +371,29 @@ export const ContributionsView: React.FC<ContributionsViewProps> = ({
                         {c.memberId}
                       </div>
                     </td>
-                    <td className="py-2.5 px-4 text-slate-700 dark:text-slate-300">
+                    <td className="py-2.5 px-3 text-slate-700 dark:text-slate-300 whitespace-nowrap">
                       {c.ethiopianMonth} {c.ethiopianYear}
                     </td>
-                    <td className="py-2.5 px-4 text-slate-600 dark:text-slate-400">
+                    <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400 whitespace-nowrap">
                       {t.paymentMethods[c.paymentMethod] || c.paymentMethod}
                     </td>
-                    <td className="py-2.5 px-4 font-mono-tabular text-slate-500 dark:text-slate-400">
-                      {c.transactionReference || '—'}
+                    <td className="py-2.5 px-3 whitespace-nowrap">
+                      {c.proofFileUrl ? (
+                        <button
+                          type="button"
+                          onClick={() => setProofPreview(c)}
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#1E3A8A] dark:text-blue-300 hover:underline"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>{t.labels.viewProof}</span>
+                        </button>
+                      ) : (
+                        <span className="font-mono-tabular text-slate-500 dark:text-slate-400">
+                          {c.transactionReference || '—'}
+                        </span>
+                      )}
                     </td>
-                    <td className="py-2.5 px-4">
+                    <td className="py-2.5 px-3 whitespace-nowrap">
                       <span
                         className={`font-semibold ${
                           c.status === 'verified' || c.status === 'completed'
@@ -386,10 +406,10 @@ export const ContributionsView: React.FC<ContributionsViewProps> = ({
                         {t.status[c.status] || c.status}
                       </span>
                     </td>
-                    <td className="py-2.5 px-4 text-right font-mono-tabular font-bold text-slate-900 dark:text-white">
+                    <td className="py-2.5 px-3 text-right font-mono-tabular font-bold text-slate-900 dark:text-white whitespace-nowrap">
                       {formatETB(c.amountETB)}
                     </td>
-                    <td className="py-2.5 px-4 text-right">
+                    <td className="py-2.5 px-3 text-right whitespace-nowrap">
                       <div className="inline-flex items-center justify-end gap-1.5">
                         {c.status === 'pending' && (
                           <button
@@ -401,6 +421,15 @@ export const ContributionsView: React.FC<ContributionsViewProps> = ({
                             <CheckCircle2 className="w-3.5 h-3.5" />
                           </button>
                         )}
+                        <button
+                          type="button"
+                          onClick={() => setPrintContribution(c)}
+                          title={t.actions.printReceipt}
+                          aria-label={t.actions.printReceipt}
+                          className="p-1.5 rounded-md text-[#0B1F3A] dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-[#13294E] transition-colors"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                        </button>
                         <button
                           type="button"
                           onClick={() => void downloadReceiptPDF(c, centerSettings, lang)}
@@ -459,6 +488,19 @@ export const ContributionsView: React.FC<ContributionsViewProps> = ({
           </div>
         )}
       </div>
+
+      <PrintReceiptModal
+        contribution={printContribution}
+        centerSettings={centerSettings}
+        lang={lang}
+        onClose={() => setPrintContribution(null)}
+      />
+
+      <ProofPreviewModal
+        contribution={proofPreview}
+        lang={lang}
+        onClose={() => setProofPreview(null)}
+      />
     </div>
   );
 };

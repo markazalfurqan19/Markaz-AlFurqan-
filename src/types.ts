@@ -1,5 +1,7 @@
 export type MemberStatus = 'active' | 'inactive' | 'suspended';
 
+export type MemberCategory = 'student' | 'teacher' | 'supporter';
+
 export type PaymentMethod =
   | 'cbe'
   | 'telebirr'
@@ -22,6 +24,7 @@ export interface Member {
   memberId: string;
   monthlyPledgeETB: number;
   status: MemberStatus;
+  category?: MemberCategory;
   city?: string;
   createdBy: string;
   createdByEmail?: string;
@@ -39,6 +42,8 @@ export interface Contribution {
   ethiopianYear: number;
   paymentMethod: PaymentMethod;
   transactionReference?: string;
+  proofFileUrl?: string;
+  proofFileName?: string;
   notes?: string;
   recordedBy: string;
   status: ContributionStatus;
@@ -59,9 +64,37 @@ export interface CenterSetting {
   phone?: string;
   email?: string;
   bankAccountDetails?: string;
+  bankInfoImage?: string;
   monthlyTargetETB?: number;
   updatedBy?: string;
   updatedAt?: string;
+}
+
+export type AuditAction =
+  | 'member_created'
+  | 'member_updated'
+  | 'member_deleted'
+  | 'contribution_created'
+  | 'contribution_updated'
+  | 'contribution_verified'
+  | 'contribution_deleted'
+  | 'admin_granted'
+  | 'admin_revoked'
+  | 'settings_updated';
+
+export type AuditTargetType = 'member' | 'contribution' | 'admin' | 'settings';
+
+export interface AuditLog {
+  id: string;
+  action: AuditAction;
+  targetType: AuditTargetType;
+  targetId: string;
+  targetLabel: string;
+  details?: string;
+  actorUid: string;
+  actorEmail: string;
+  actorName?: string;
+  createdAt: string;
 }
 
 export const SCHEMA_LIMITS = {
@@ -76,12 +109,21 @@ export const SCHEMA_LIMITS = {
   CONTRIBUTION_RECEIPT: 40,
   CONTRIBUTION_MONTH: 30,
   CONTRIBUTION_TX_REF: 100,
+  CONTRIBUTION_PROOF_URL: 250000,
+  CONTRIBUTION_PROOF_NAME: 120,
   CONTRIBUTION_NOTES: 300,
   ADMIN_EMAIL: 120,
   SETTING_CENTER_NAME: 150,
   SETTING_PHONE: 40,
   SETTING_EMAIL: 100,
   SETTING_BANK_DETAILS: 500,
+  SETTING_BANK_IMAGE: 250000,
+  AUDIT_TARGET_ID: 128,
+  AUDIT_TARGET_LABEL: 160,
+  AUDIT_DETAILS: 300,
+  AUDIT_ACTOR_UID: 128,
+  AUDIT_ACTOR_EMAIL: 120,
+  AUDIT_ACTOR_NAME: 120,
   MAX_TARGET_ETB: 1000000000,
   DOC_ID: 128,
 } as const;
